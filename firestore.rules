@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Flood Reports Collection - Public read, authenticated or anonymous write
+    match /flood_reports/{report} {
+      // Allow anyone to read flood reports (public safety information)
+      allow read: if true;
+      
+      // Allow authenticated users to create reports
+      allow create: if request.auth != null;
+      
+      // Allow users to update their own reports or anonymous reports
+      allow update: if request.auth != null && 
+                       (request.auth.uid == resource.data.userId || 
+                        resource.data.userId == null);
+      
+      // Allow deletion only by the report creator
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.userId;
+    }
+    
+    // Users Collection - Personal data protection
+    match /users/{userId} {
+      // Users can read and write their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Default deny for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
